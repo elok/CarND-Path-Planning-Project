@@ -51,7 +51,7 @@ int main() {
     map_waypoints_dy.push_back(d_y);
   }
 
-  // start in lane 1
+  // start in lane 1 (middle lane)
   int lane = 1;
 
   // Have a reference velocity to target
@@ -189,11 +189,11 @@ int main() {
           else 
           {
             // Redefine ref state as previous path end point
-            ref_x = previous_path_x[prev_size-2];
-            ref_y = previous_path_y[prev_size-2];
+            ref_x = previous_path_x[prev_size - 1];
+            ref_y = previous_path_y[prev_size - 1];
 
-            double ref_x_prev = previous_path_x[prev_size-2];
-            double ref_y_prev = previous_path_y[prev_size-2];
+            double ref_x_prev = previous_path_x[prev_size - 2];
+            double ref_y_prev = previous_path_y[prev_size - 2];
             ref_yaw = atan2(ref_y-ref_y_prev, ref_x-ref_x_prev);
 
             std::cout << ref_x_prev << std::endl;
@@ -271,21 +271,6 @@ int main() {
             next_x_vals.push_back(x_point);
             next_y_vals.push_back(y_point);
           }
-
-          // Go in a straight line
-          // double dist_inc = 0.5;
-          // for (int i = 0; i < 50; ++i) {
-          //   // predict next s
-          //   double next_s = car_s + (i+1) * dist_inc;
-          //   // each lane is 4 meters. the center lane is 1 and half lane therefore 4 + 2 = 6
-          //   double next_d = 6;
-
-          //   vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-
-          //   next_x_vals.push_back(xy[0]);
-          //   next_y_vals.push_back(xy[1]);
-          // }
-
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
