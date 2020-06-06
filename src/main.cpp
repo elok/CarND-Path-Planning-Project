@@ -58,7 +58,7 @@ int main() {
   double ref_vel = 49.5; // mph
 
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
-               &map_waypoints_dx,&map_waypoints_dy, &lane]
+               &map_waypoints_dx,&map_waypoints_dy, &lane, &ref_vel]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -107,6 +107,58 @@ int main() {
            */
           int prev_size = previous_path_x.size();
 
+          // -----------------------------------------------
+          // CAR SENSOR
+          // -----------------------------------------------
+          if (prev_size > 0 )
+          {
+            car_s = end_path_s;
+          }
+
+          bool too_close = false;
+
+          // find ref_v to use
+          for (int i = 0; i < sensor_fusion.size(); i++)
+          {
+            // car is in my lane
+            float d = sensor_fusion[i][6];
+            if (d < (2+4*lane+2) && d > (2+4*lane-2))
+            {
+              double vx = sensor_fusion[i][3];
+              double vy = sensor_fusion[i][4];
+              double check_speed = sqrt(vx*vx+vy*vy);
+              double check_car_s = sensor_fusion[i][5];
+
+              check_car_s += ((double)prev_size * 0.02 * check_speed);
+
+              // check s values greater than mine and s gap
+              if ((check_car_s > car_s) && ((check_car_s - car_s) < 30))
+              {
+                // 
+                // ref_vel = 29.5;
+                too_close = true;
+
+                if (lane > 0)
+                {
+                  lane = 0;
+                }
+              }
+            }
+          }
+
+          if (too_close)
+          {
+            ref_vel -= .224;
+          }
+          else if(ref_vel < 49.5)
+          {
+            ref_vel += .224;
+          }
+
+          // -----------------------------------------------
+          // SETTINGS UP THE POINTS
+          // -----------------------------------------------
+
           // List of widely spaced (x, y) waypoints evenly spaced at 30m
           vector<double> ptsx;
           vector<double> ptsy;
@@ -124,6 +176,9 @@ int main() {
             double prev_car_x = car_x - cos(car_yaw);
             double prev_car_y = car_y - sin(car_yaw);
 
+            std::cout << prev_car_x << std::endl;
+            std::cout << prev_car_y << std::endl;
+
             ptsx.push_back(prev_car_x);
             ptsx.push_back(car_x);
 
@@ -140,6 +195,9 @@ int main() {
             double ref_x_prev = previous_path_x[prev_size-2];
             double ref_y_prev = previous_path_y[prev_size-2];
             ref_yaw = atan2(ref_y-ref_y_prev, ref_x-ref_x_prev);
+
+            std::cout << ref_x_prev << std::endl;
+            std::cout << ref_y_prev << std::endl;
 
             // Use two points that make the path tangent to the prev path's end point
             ptsx.push_back(ref_x_prev);
@@ -163,22 +221,56 @@ int main() {
           ptsy.push_back(next_wp2[1]);
 
 
-          for (int i = 0; i < ptsx.size(); i++)
-          {
-            // shift car reference angle to 0 degress. easier to work with
-            double shift_x = ptsx[i] - ref_x;
-            double shift_y = ptsy[i] - ref_y;
+          for ( int i = 0; i < ptsx.size(); i++ ) {
+              double shift_x = ptsx[i] - ref_x;
+              double shift_y = ptsy[i] - ref_y;
 
-            ptsx[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
-            ptsx[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
-          }
+              ptsx[i] = shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw);
+              ptsy[i] = shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw);
+					}
 
           // create the spline
           tk::spline s;
 
-          // set (x, y) points to the spline
+          // set (x, y) points to the spline  (add "anchor" points)
           s.set_points(ptsx, ptsy);
 
+          // Start with all of the previous path points from last time
+          for (int i = 0; i < previous_path_x.size(); i++)
+          {
+            next_x_vals.push_back(previous_path_x[i]);
+            next_y_vals.push_back(previous_path_y[i]);
+          }
+
+          // Calculate how to break up spline points so that we travel at our at our desired reference velocity
+          double target_x = 30.0;
+          double target_y = s(target_x);
+          double target_dist = sqrt((target_x) * (target_x) + (target_y) * (target_y));
+
+          double x_add_on = 0;
+
+          // Fill up the rest of our path planner after filling it with prev poitns, here we will always output 50 points
+          for (int i = 0; i <= 50-previous_path_x.size(); i++)
+          {
+            double N = (target_dist / (.02 * ref_vel / 2.24));
+            double x_point = x_add_on + (target_x)/N;
+            double y_point = s(x_point);
+
+            x_add_on = x_point;
+
+            double x_ref = x_point; 
+            double y_ref = y_point;
+
+            // rotate back to normal after rotating it earlier
+            x_point = (x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw));
+            y_point = (x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw));
+
+            x_point += ref_x;
+            y_point += ref_y;
+
+            next_x_vals.push_back(x_point);
+            next_y_vals.push_back(y_point);
+          }
 
           // Go in a straight line
           // double dist_inc = 0.5;
