@@ -21,7 +21,7 @@ If the car is in the same lane as us and they're really close, we use the inform
 
 4. GENERATE WAYPOINTS Part 2: Given the lane we want to move to and meters forward we want to plan for, we use getXY to generate additional waypoints. We then take all the waypoints and shift the car reference angle to 0 degrees for ease of use and generation of cleaner waypoints later with the spline.
 
-5. GENERATE WAYPOINTS Part 3: Using all the information above, we use spline.h to generate a smooth trajectory to our desired waypoints. It takes into account the lane we want to move to and the acceration or deceleration of our car.
+5. GENERATE TRAJECTORY: Using all the information above, we use spline.h to generate a smooth trajectory to our desired waypoints. It takes into account the lane we want to move to and the acceration or deceleration of our car.
 
 ## Rubic
 
