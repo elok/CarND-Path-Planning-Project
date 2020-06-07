@@ -15,13 +15,13 @@ The goal of this project is to safely navigate around a virtual highway with oth
 1. SENSOR FUSION Part 1: the code first iterates through the list of sensor fusion cars and determines which lane they're in and how close they are. The d variable is used to determine which lane they're in and s was used to determine where in the lane they are. (main.cpp -- Code line 121)
 
 2. SENSOR FUSION Part 2: Once we know where the other cars are, we have to determine our next steps and what we want to do. 
-If the car is in the same lane as us and they're really close, we use the information above to determine which lane we can switch to. If we can't switch lanes than we have to slowly decelerate. 
+If the car is in the same lane as us and they're really close, we use the information above to determine which lane we can switch to. If we can't switch lanes than we have to slowly decelerate. (main.cpp -- Code line 175)
 
-3. GENERATE WAYPOINTS Part 1: We first create a list of waypoints. If there was a previous list, we will use two previous points from that list. If we don't have a previous list, we use our car's points and get new points by making a path tangent to the our car.
+3. GENERATE WAYPOINTS Part 1: We first create a list of waypoints. If there was a previous list, we will use two previous points from that list. If we don't have a previous list, we use our car's points and get new points by making a path tangent to the our car. (main.cpp -- Code line 200)
 
-4. GENERATE WAYPOINTS Part 2: Given the lane we want to move to and meters forward we want to plan for, we use getXY to generate additional waypoints. We then take all the waypoints and shift the car reference angle to 0 degrees for ease of use and generation of cleaner waypoints later with the spline.
+4. GENERATE WAYPOINTS Part 2: Given the lane we want to move to and meters forward we want to plan for, we use getXY to generate additional waypoints. We then take all the waypoints and shift the car reference angle to 0 degrees for ease of use and generation of cleaner waypoints later with the spline. (main.cpp -- Code line 247)
 
-5. GENERATE TRAJECTORY: Using all the information above, we use spline.h to generate a smooth trajectory to our desired waypoints. It takes into account the lane we want to move to and the acceration or deceleration of our car.
+5. GENERATE TRAJECTORY: Using all the information above, we use spline.h to generate a smooth trajectory to our desired waypoints. It takes into account the lane we want to move to and the acceration or deceleration of our car. (main.cpp -- Code line 273)
 
 ## Rubic
 
