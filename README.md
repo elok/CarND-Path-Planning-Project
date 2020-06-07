@@ -10,7 +10,7 @@ The goal of this project is to safely navigate around a virtual highway with oth
 2. Compile: `cmake .. && make`
 3. Run it: `./path_planning`.
 
-## Details
+## Model Documentation
 
 1. SENSOR FUSION Part 1: the code first iterates through the list of sensor fusion cars and determines which lane they're in and how close they are. The d variable is used to determine which lane they're in and s was used to determine where in the lane they are. (main.cpp -- Code line 121)
 
@@ -22,6 +22,32 @@ If the car is in the same lane as us and they're really close, we use the inform
 4. GENERATE WAYPOINTS Part 2: Given the lane we want to move to and meters forward we want to plan for, we use getXY to generate additional waypoints. We then take all the waypoints and shift the car reference angle to 0 degrees for ease of use and generation of cleaner waypoints later with the spline.
 
 5. GENERATE WAYPOINTS Part 3: Using all the information above, we use spline.h to generate a smooth trajectory to our desired waypoints. It takes into account the lane we want to move to and the acceration or deceleration of our car.
+
+## Rubic
+
+1. The car is able to drive at least 4.32 miles without incident..
+
+As shown in the screenshot, the car was able to drive at least 4.32 miles without incident.
+
+2. The car drives according to the speed limit.
+
+The car drives is only allowed a maximum speed of 49.5 mph. It is simply hardcoded and the car cannot exceed this maximum speed. 
+
+3. Max Acceleration and Jerk are not Exceeded.
+
+Max acceleration and jerk is not exceeded because we control how much the speed can increase per interval. The spline library helps to create smooth trajectories so jerk is minimized. 
+
+4. Car does not have collisions.
+
+Car collisions are controlled by our sensor fusion part of the code. If we know which lanes the cars are, we can make accurate decisions. 
+
+5. The car stays in its lane, except for the time between changing lanes.
+
+Staying in the lane is relatively easy because you have d and you know where each lane begins and ends. We know each lane is 4 meters wide. Simply staying between 0 and 4 is lane 1, 4 and 8 is lane 2, and 8 and 12 is the third lane.
+
+6. The car is able to change lanes
+
+Once we know which lane we want to change to, we incorporate the lane into the waypoint generation. It is an input to the getXY function as the d variable. Later, we use the spline library to generate smooth trajectories between the lanes.
 
 ## Dependencies
 
