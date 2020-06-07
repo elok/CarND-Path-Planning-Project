@@ -55,7 +55,7 @@ int main() {
   int lane = 1;
 
   // Have a reference velocity to target
-  double ref_vel = 49.5; // mph
+  double ref_vel = 0.0; // mph
 
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
                &map_waypoints_dx,&map_waypoints_dy, &lane, &ref_vel]
@@ -107,56 +107,188 @@ int main() {
            */
           int prev_size = previous_path_x.size();
 
-          // -----------------------------------------------
-          // CAR SENSOR
-          // -----------------------------------------------
           if (prev_size > 0 )
           {
+            // if we already have a path, then make the car's s the same as the previous path's s
             car_s = end_path_s;
           }
 
-          bool too_close = false;
+          // -----------------------------------------------
+          // SENSOR FUSION
+          // -----------------------------------------------
 
-          // find ref_v to use
+          // variable to determine if we're too close to the car in front
+          bool car_too_close_ahead = false;
+          bool car_on_left = false;
+          bool car_on_right = false;
+
+          // Iterate through all the nearby cars
           for (int i = 0; i < sensor_fusion.size(); i++)
           {
-            // car is in my lane
+            // Retrieve sensor car information
             float d = sensor_fusion[i][6];
-            if (d < (2+4*lane+2) && d > (2+4*lane-2))
-            {
-              double vx = sensor_fusion[i][3];
-              double vy = sensor_fusion[i][4];
-              double check_speed = sqrt(vx*vx+vy*vy);
-              double check_car_s = sensor_fusion[i][5];
+            double vx = sensor_fusion[i][3];
+            double vy = sensor_fusion[i][4];
+            double check_speed = sqrt(vx*vx+vy*vy);
+            double check_car_s = sensor_fusion[i][5];
 
-              check_car_s += ((double)prev_size * 0.02 * check_speed);
+            check_car_s += ((double)prev_size * 0.02 * check_speed);
 
-              // check s values greater than mine and s gap
-              if ((check_car_s > car_s) && ((check_car_s - car_s) < 30))
-              {
-                // 
-                // ref_vel = 29.5;
-                too_close = true;
+            // Verify lane sensor fusion car is in
+            int sensor_car_in_lane;
+            if(d > 0 && d < 4) {
+								sensor_car_in_lane = 0;
+						} else if(d > 4 && d < 8) {
+								sensor_car_in_lane = 1;
+						} else if(d > 8 and d < 12) {
+								sensor_car_in_lane = 2;
+						} 
 
-                if (lane > 0)
-                {
-                  lane = 0;
-                }
-              }
+            // s gap in meters to check
+            int meters_to_check = 33;
+
+            if(sensor_car_in_lane == lane) {
+              // There's a sensor car in the same lane
+              car_too_close_ahead |= check_car_s > car_s && (check_car_s - car_s) < meters_to_check;										
+
+            } else if((sensor_car_in_lane - lane) == -1) {
+              // There's a sensor car in the left lane
+              car_on_left |= (car_s + meters_to_check) > check_car_s  && (car_s - meters_to_check) < check_car_s;
+
+            } else if((sensor_car_in_lane - lane) == 1) {
+              // There's a sensor car in the right lane
+              car_on_right |= (car_s + meters_to_check) > check_car_s  && (car_s - meters_to_check) < check_car_s;
             }
+
+            //   // check s values greater than mine and s gap
+            //   if ((check_car_s > car_s) && ((check_car_s - car_s) < 30))
+            //   {
+            //     car_too_close_ahead = true;
+
+            //     // if (lane > 0)
+            //     // {
+            //     //   // switch to left lane
+            //     //   lane = 0;
+            //     // }
+            //   }
+            // }
+
+
+            // Check LEFT lane
+          //   if (lane == 0)
+          //   {
+          //     // There is a car on the LEFT
+          //     car_on_left = true;
+
+          //     // Check right
+          //     if (d > 4 && d < 8)
+          //     {
+          //       car_on_right = true;
+          //     }
+          //   }
+          //   // Check MIDDLE lane
+          //   if (lane == 1)
+          //   {
+          //     // Check left
+          //     if (d > 0 && d < 4)
+          //     {
+          //       car_on_left = true;
+          //     }
+          //     if (d > 8 && d < 12)
+          //     {
+          //       // There is a car on the RIGHT
+          //       car_on_right = true;
+          //     }
+          //   }
+          //   // Check RIGHT lane
+          //   if (lane == 0)
+          //   {
+          //     // There is a car on the LEFT
+          //     car_on_right = true;
+
+          //     // Check left
+          //     if (d > 4 && d < 8)
+          //     {
+          //       car_on_left = true;
+          //     }
+            
           }
 
-          if (too_close)
-          {
-            ref_vel -= .224;
+          // TEST TEST TEST
+          // std::cout << sensor_fusion << std::endl;
+
+          if (car_on_left){
+            std::cout << "car_on_left" << std::endl;
           }
+          if (car_on_right){
+            std::cout << "car_on_right" << std::endl;
+          }
+          if (car_too_close_ahead){
+            std::cout << "car_too_close_ahead" << std::endl;
+          }
+
+          if(car_too_close_ahead) 
+          {
+							if(!car_on_left && lane > 0) {
+                // No car on the left. Move to left lane.
+								lane--;
+							} else if(!car_on_right && lane < 2) {
+                // No car on the right. Move to right lane.
+								lane++;
+							// } else if(!car_on_left && lane < 2) {
+              //   // 
+							// 	lane++;
+							}else {
+                // Too close to the car ahead. Slow down!
+                // There must be cars on the left and right.
+								ref_vel -= .224;
+							}
+					} 
           else if(ref_vel < 49.5)
           {
-            ref_vel += .224;
-          }
+            // speed up
+						ref_vel += .224;
+					}
+
+          // Now we know where the cars are, decide WHAT TO DO
+          // if (car_too_close_ahead && car_on_left && car_on_right)
+          // {
+          //   // car ahead and no where to go, slow down!
+          //   ref_vel -= .224;
+
+          //   std::cout << "slowing down" << std::endl;
+          // }
+          // else if (car_too_close_ahead && car_on_left && !car_on_right)
+          // {
+          //   // car ahead and car on the left, switch to right lane
+          //   lane += 1;
+
+          //   std::cout << "switch to right lane" << std::endl;
+          // }
+          // else if (car_too_close_ahead && !car_on_left && car_on_right)
+          // {
+          //   // car ahead too close and car on the right, switch to left lane
+          //   lane -= 1;
+
+          //   std::cout << "switch to left lane" << std::endl;
+          // }
+          // else if(ref_vel < 49.5 && !car_too_close_ahead)
+          // {
+          //   // speed up?
+          //   ref_vel += .224;
+
+          //   std::cout << "speeding up" << std::endl;
+          // }
+          // else if (car_too_close_ahead)
+          // {
+          //   // slow down
+          //   ref_vel -= .224;
+
+          //   std::cout << "!!!!! slowing down" << std::endl;
+          // }
 
           // -----------------------------------------------
-          // SETTINGS UP THE POINTS
+          // SETTING UP THE POINTS FOR THE PATH
           // -----------------------------------------------
 
           // List of widely spaced (x, y) waypoints evenly spaced at 30m
@@ -176,9 +308,6 @@ int main() {
             double prev_car_x = car_x - cos(car_yaw);
             double prev_car_y = car_y - sin(car_yaw);
 
-            std::cout << prev_car_x << std::endl;
-            std::cout << prev_car_y << std::endl;
-
             ptsx.push_back(prev_car_x);
             ptsx.push_back(car_x);
 
@@ -196,9 +325,6 @@ int main() {
             double ref_y_prev = previous_path_y[prev_size - 2];
             ref_yaw = atan2(ref_y-ref_y_prev, ref_x-ref_x_prev);
 
-            std::cout << ref_x_prev << std::endl;
-            std::cout << ref_y_prev << std::endl;
-
             // Use two points that make the path tangent to the prev path's end point
             ptsx.push_back(ref_x_prev);
             ptsx.push_back(ref_x);
@@ -207,10 +333,14 @@ int main() {
             ptsy.push_back(ref_y);
           }
 
+          // -----------------------------------------------
+          // GENERATE THE REST OF THE POINTS
+          // -----------------------------------------------
+
           // In frenet add evenly 30m spaced points ahead of the starting reference
-          vector<double> next_wp0 = getXY(car_s+30, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-          vector<double> next_wp1 = getXY(car_s+60, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-          vector<double> next_wp2 = getXY(car_s+90, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> next_wp0 = getXY(car_s + 30, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> next_wp1 = getXY(car_s + 60, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> next_wp2 = getXY(car_s + 90, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
           ptsx.push_back(next_wp0[0]);
           ptsx.push_back(next_wp1[0]);
@@ -219,7 +349,6 @@ int main() {
           ptsy.push_back(next_wp0[1]);
           ptsy.push_back(next_wp1[1]);
           ptsy.push_back(next_wp2[1]);
-
 
           for ( int i = 0; i < ptsx.size(); i++ ) {
               double shift_x = ptsx[i] - ref_x;
@@ -249,11 +378,11 @@ int main() {
 
           double x_add_on = 0;
 
-          // Fill up the rest of our path planner after filling it with prev poitns, here we will always output 50 points
+          // Fill up the rest of our path planner after filling it with prev points, here we will always output 50 points
           for (int i = 0; i <= 50-previous_path_x.size(); i++)
           {
             double N = (target_dist / (.02 * ref_vel / 2.24));
-            double x_point = x_add_on + (target_x)/N;
+            double x_point = x_add_on + (target_x) / N;
             double y_point = s(x_point);
 
             x_add_on = x_point;
