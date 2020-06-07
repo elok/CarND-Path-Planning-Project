@@ -12,9 +12,16 @@ The goal of this project is to safely navigate around a virtual highway with oth
 
 ## Details
 
-1. The car uses a perfect controller and will visit every (x,y) point it recieves in the list every .02 seconds. The units for the (x,y) points are in meters and the spacing of the points determines the speed of the car. The vector going from a point to the next point in the list dictates the angle of the car. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration. The (x,y) point paths that the planner recieves should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3. (NOTE: As this is BETA, these requirements might change. Also currently jerk is over a .02 second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
+1. SENSOR FUSION Part 1: the code first iterates through the list of sensor fusion cars and determines which lane they're in and how close they are. The d variable is used to determine which lane they're in and s was used to determine where in the lane they are. (main.cpp -- Code line 121)
 
-2. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition. previous_path_x, and previous_path_y can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
+2. SENSOR FUSION Part 2: Once we know where the other cars are, we have to determine our next steps and what we want to do. 
+If the car is in the same lane as us and they're really close, we use the information above to determine which lane we can switch to. If we can't switch lanes than we have to slowly decelerate. 
+
+3. GENERATE WAYPOINTS Part 1: We first create a list of waypoints. If there was a previous list, we will use two previous points from that list. If we don't have a previous list, we use our car's points and get new points by making a path tangent to the our car.
+
+4. GENERATE WAYPOINTS Part 2: Given the lane we want to move to and meters forward we want to plan for, we use getXY to generate additional waypoints. We then take all the waypoints and shift the car reference angle to 0 degrees for ease of use and generation of cleaner waypoints later with the spline.
+
+5. GENERATE WAYPOINTS Part 3: Using all the information above, we use spline.h to generate a smooth trajectory to our desired waypoints. It takes into account the lane we want to move to and the acceration or deceleration of our car.
 
 ## Dependencies
 
