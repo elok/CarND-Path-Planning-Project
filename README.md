@@ -29,6 +29,8 @@ If the car is in the same lane as us and they're really close, we use the inform
 
 As shown in the screenshot, the car was able to drive at least 4.32 miles without incident.
 
+![](https://github.com/elok/CarND-Path-Planning-Project/blob/master/src/screenshot.png)
+
 2. The car drives according to the speed limit.
 
 The car drives is only allowed a maximum speed of 49.5 mph. It is simply hardcoded and the car cannot exceed this maximum speed. 
