@@ -159,74 +159,19 @@ int main() {
               // There's a sensor car in the right lane
               car_on_right |= (car_s + meters_to_check) > check_car_s  && (car_s - meters_to_check) < check_car_s;
             }
-
-            //   // check s values greater than mine and s gap
-            //   if ((check_car_s > car_s) && ((check_car_s - car_s) < 30))
-            //   {
-            //     car_too_close_ahead = true;
-
-            //     // if (lane > 0)
-            //     // {
-            //     //   // switch to left lane
-            //     //   lane = 0;
-            //     // }
-            //   }
-            // }
-
-
-            // Check LEFT lane
-          //   if (lane == 0)
-          //   {
-          //     // There is a car on the LEFT
-          //     car_on_left = true;
-
-          //     // Check right
-          //     if (d > 4 && d < 8)
-          //     {
-          //       car_on_right = true;
-          //     }
-          //   }
-          //   // Check MIDDLE lane
-          //   if (lane == 1)
-          //   {
-          //     // Check left
-          //     if (d > 0 && d < 4)
-          //     {
-          //       car_on_left = true;
-          //     }
-          //     if (d > 8 && d < 12)
-          //     {
-          //       // There is a car on the RIGHT
-          //       car_on_right = true;
-          //     }
-          //   }
-          //   // Check RIGHT lane
-          //   if (lane == 0)
-          //   {
-          //     // There is a car on the LEFT
-          //     car_on_right = true;
-
-          //     // Check left
-          //     if (d > 4 && d < 8)
-          //     {
-          //       car_on_left = true;
-          //     }
-            
           }
 
-          // TEST TEST TEST
-          // std::cout << sensor_fusion << std::endl;
+          // if (car_on_left){
+          //   std::cout << "car_on_left" << std::endl;
+          // }
+          // if (car_on_right){
+          //   std::cout << "car_on_right" << std::endl;
+          // }
+          // if (car_too_close_ahead){
+          //   std::cout << "car_too_close_ahead" << std::endl;
+          // }
 
-          if (car_on_left){
-            std::cout << "car_on_left" << std::endl;
-          }
-          if (car_on_right){
-            std::cout << "car_on_right" << std::endl;
-          }
-          if (car_too_close_ahead){
-            std::cout << "car_too_close_ahead" << std::endl;
-          }
-
+          // Now we know where the cars are, decide WHAT TO DO
           if(car_too_close_ahead) 
           {
 							if(!car_on_left && lane > 0) {
@@ -235,9 +180,6 @@ int main() {
 							} else if(!car_on_right && lane < 2) {
                 // No car on the right. Move to right lane.
 								lane++;
-							// } else if(!car_on_left && lane < 2) {
-              //   // 
-							// 	lane++;
 							}else {
                 // Too close to the car ahead. Slow down!
                 // There must be cars on the left and right.
@@ -246,49 +188,12 @@ int main() {
 					} 
           else if(ref_vel < 49.5)
           {
-            // speed up
+            // All clear up ahead, speed up
 						ref_vel += .224;
 					}
 
-          // Now we know where the cars are, decide WHAT TO DO
-          // if (car_too_close_ahead && car_on_left && car_on_right)
-          // {
-          //   // car ahead and no where to go, slow down!
-          //   ref_vel -= .224;
-
-          //   std::cout << "slowing down" << std::endl;
-          // }
-          // else if (car_too_close_ahead && car_on_left && !car_on_right)
-          // {
-          //   // car ahead and car on the left, switch to right lane
-          //   lane += 1;
-
-          //   std::cout << "switch to right lane" << std::endl;
-          // }
-          // else if (car_too_close_ahead && !car_on_left && car_on_right)
-          // {
-          //   // car ahead too close and car on the right, switch to left lane
-          //   lane -= 1;
-
-          //   std::cout << "switch to left lane" << std::endl;
-          // }
-          // else if(ref_vel < 49.5 && !car_too_close_ahead)
-          // {
-          //   // speed up?
-          //   ref_vel += .224;
-
-          //   std::cout << "speeding up" << std::endl;
-          // }
-          // else if (car_too_close_ahead)
-          // {
-          //   // slow down
-          //   ref_vel -= .224;
-
-          //   std::cout << "!!!!! slowing down" << std::endl;
-          // }
-
           // -----------------------------------------------
-          // SETTING UP THE POINTS FOR THE PATH
+          // SETTING UP THE BEGINNING POINTS FOR THE PATH
           // -----------------------------------------------
 
           // List of widely spaced (x, y) waypoints evenly spaced at 30m
@@ -334,9 +239,10 @@ int main() {
           }
 
           // -----------------------------------------------
-          // GENERATE THE REST OF THE POINTS
+          // GENERATE WAYPOINTS
           // -----------------------------------------------
 
+          // NOTE that formula takes into account the lane we want to move to.
           // In frenet add evenly 30m spaced points ahead of the starting reference
           vector<double> next_wp0 = getXY(car_s + 30, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
           vector<double> next_wp1 = getXY(car_s + 60, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
@@ -358,11 +264,19 @@ int main() {
               ptsy[i] = shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw);
 					}
 
+          // -----------------------------------------------
+          // GIVEN THE WAYPOINTS, GENERATE SPLINE
+          // -----------------------------------------------
+
           // create the spline
           tk::spline s;
 
           // set (x, y) points to the spline  (add "anchor" points)
           s.set_points(ptsx, ptsy);
+
+          // -----------------------------------------------
+          // GIVEN THE SPLINE, GENERATE NEXT X,Y VALUES
+          // -----------------------------------------------
 
           // Start with all of the previous path points from last time
           for (int i = 0; i < previous_path_x.size(); i++)
